@@ -15,6 +15,8 @@ public class KmlLayerSource : LayerSource
             Debug.LogError("Kml is not assigned");
             return;
         }
+        
+        MapLayerRenderer.Instance.RenderLayer(LoadLayer());
     }
 
     private MapLayer LoadLayer()

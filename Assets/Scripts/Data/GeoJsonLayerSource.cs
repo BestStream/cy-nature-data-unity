@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Globalization;
 using Newtonsoft.Json.Linq;
-using UnityEngine;
 
 public class GeoJsonLayerSource : LayerSource
 {
@@ -54,6 +51,7 @@ public class GeoJsonLayerSource : LayerSource
         }
 
         Debug.Log($"CadastreLayerBootstrap: Rendering cadastre layer with {combinedLayer.Features.Count} features from {chunks.Count} chunks.");
+        MapLayerRenderer.Instance.RenderLayer(combinedLayer);
     }
 
     public MapLayer LoadLayer(string geoJson)
