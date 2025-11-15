@@ -4,18 +4,11 @@ using Newtonsoft.Json.Linq;
 
 public class GeoJsonDaraManager : MonoBehaviour
 {
-    [Header("Dataset")]
-    [Tooltip("Logical name of the dataset, used only in logs (e.g. \"Cadastre\", \"PlanningZones\").")]
-    [SerializeField] private string datasetName = "PlanningZones";
+    [SerializeField] private string datasetName;
 
     [Header("Service Settings")]
-    [SerializeField]
-    private string baseService =
-        "https://eservices.dls.moi.gov.cy/inspire/rest/services/INSPIRE/LU_LandUse/MapServer";
-
-    // ID слоя внутри указанного MapServer (например: 1 - Cadastral Parcels, 0 - Planning Zones)
-    [SerializeField]
-    private int layerId = 0;
+    [SerializeField] private string baseService;
+    [SerializeField] private int layerId;
 
     [Header("Paging")]
     [Tooltip("Max records per request (ArcGIS REST, default = MaxRecordCount 1000).")]

@@ -8,8 +8,11 @@ public class KmlLayerSource : LayerSource
 {
     [SerializeField] private TextAsset _dataSource;
     
-    private void Start()
+    public override void Init()
     {
+        if(_init)
+            return;
+        
         if (_dataSource == null)
         {
             Debug.LogError("Kml is not assigned");
@@ -17,6 +20,8 @@ public class KmlLayerSource : LayerSource
         }
         
         MapLayerRenderer.Instance.RenderLayer(LoadLayer());
+        
+        _init =  true;
     }
 
     private MapLayer LoadLayer()

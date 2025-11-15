@@ -30,12 +30,14 @@ public class MainScreen : MonoBehaviour
             toggle.GetComponentInChildren<Text>()?.SetText(layer.DisplayName);
 
             toggle.isOn = false;
-            MapLayerRenderer.Instance.SetLayerVisible(layer.Id, toggle.isOn);
 
-            var layerId = layer.Id; // захват в замыкание
+            var l = layer;
             toggle.onValueChanged.AddListener(isOn =>
             {
-                MapLayerRenderer.Instance.SetLayerVisible(layerId, isOn);
+                if (isOn)
+                    l.Init();
+                
+                MapLayerRenderer.Instance.SetLayerVisible(l.Id, isOn);
             });
 
             // _toggles.Add(toggle);

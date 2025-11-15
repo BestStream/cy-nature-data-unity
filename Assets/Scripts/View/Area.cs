@@ -12,12 +12,11 @@ public class Area : MonoBehaviour
     [SerializeField] private MeshRenderer _meshRenderer;
     [SerializeField] private MeshCollider _meshCollider;
 
-    [Header("Label size")]
-    [Tooltip("Base character size for labels on very small polygons.")]
-    [SerializeField] private float labelBaseSize = 0.2f;
+    [Header("Label size")] [Tooltip("Base character size for labels on very small polygons.")] [SerializeField]
+    private float labelBaseSize = 0.2f;
 
-    [Tooltip("How much the label size grows with polygon extent (per 1 Unity unit).")]
-    [SerializeField] private float labelExtentFactor = 0.02f;
+    [Tooltip("How much the label size grows with polygon extent (per 1 Unity unit).")] [SerializeField]
+    private float labelExtentFactor = 0.02f;
 
     [SerializeField] private float _lineWidth = 0.05f;
     [SerializeField] private Vector3 labelOffset = new Vector3(0f, 0f, 0f);
@@ -37,7 +36,7 @@ public class Area : MonoBehaviour
 
         SetupLabel();
 
-        _meshRenderer.sharedMaterial = layer.FillMaterial;
+        Invoke(nameof(SetupMesh), Random.Range(0.1f, 9.9f));
 
         return this;
     }
@@ -64,7 +63,7 @@ public class Area : MonoBehaviour
         if (_layer.LineSimplifyTolerance > 0f)
             _line.Simplify(_layer.LineSimplifyTolerance);
     }
-    
+
     private void SetupLabel()
     {
         _label.gameObject.SetActive(!string.IsNullOrEmpty(_feature.Name));
@@ -156,13 +155,22 @@ public class Area : MonoBehaviour
         cx /= (6.0 * area);
         cz /= (6.0 * area);
 
-        return new Vector3((float) cx, 0f, (float) cz);
+        return new Vector3((float)cx, 0f, (float)cz);
     }
 
-    [ContextMenu("Build Filled Mesh")]
-    private void BuildFilledMesh()
+    private void SetupMesh()
     {
-        if (MeshUtilities.BuildFilledMesh(_line, out var mesh))
-            _meshCollider.sharedMesh = _meshFilter.sharedMesh = mesh;
+        _meshRenderer.sharedMaterial = _layer.FillMaterial;
+
+        MeshUtilities.BuildFilledMesh(_line).ContinueWith(task =>
+        {
+            if (task.IsCompleted && task.Result != null)
+                _meshCollider.sharedMesh = _meshFilter.sharedMesh = task.Result;
+        }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
+    public void MeshVisibility(bool visibility)
+    {
+        _meshRenderer.enabled = visibility;
     }
 }

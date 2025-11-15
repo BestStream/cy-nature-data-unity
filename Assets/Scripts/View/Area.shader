@@ -13,6 +13,8 @@ Shader "Custom/Area"
             "RenderType"     = "Transparent"
             "Queue"          = "Transparent+10"
         }
+        
+        Cull Off
 
         // Standard alpha blending
         Blend SrcAlpha OneMinusSrcAlpha

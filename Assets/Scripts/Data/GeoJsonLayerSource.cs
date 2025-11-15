@@ -5,8 +5,11 @@ public class GeoJsonLayerSource : LayerSource
 {
     [SerializeField] private GeoJsonDaraManager _dataManager;
 
-    private void Start()
+    public override void Init()
     {
+        if(_init)
+            return;
+        
         if (_dataManager == null)
         {
             Debug.LogError("CadastreLayerBootstrap: dataManager is not assigned, cannot load cached cadastre chunks.");
@@ -52,6 +55,8 @@ public class GeoJsonLayerSource : LayerSource
 
         Debug.Log($"CadastreLayerBootstrap: Rendering cadastre layer with {combinedLayer.Features.Count} features from {chunks.Count} chunks.");
         MapLayerRenderer.Instance.RenderLayer(combinedLayer);
+        
+        _init =  true;
     }
 
     public MapLayer LoadLayer(string geoJson)

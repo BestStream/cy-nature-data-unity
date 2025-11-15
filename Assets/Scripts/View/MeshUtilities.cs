@@ -24,12 +24,10 @@ public class MeshUtilities
             line.SetPosition(i, line.transform.InverseTransformPoint(worldPoints[i]));
     }
 
-    public static bool BuildFilledMesh(LineRenderer line, out Mesh mesh)
+    public static Task<Mesh> BuildFilledMesh(LineRenderer line)
     {
-        mesh = null;
-
         int count = line.positionCount;
-        if (count < 3) return false;
+        if (count < 3) return null;
 
         // 0) Read points and convert to WORLD space consistently
         var worldPoints = new List<Vector3>(count);
@@ -51,7 +49,7 @@ public class MeshUtilities
             pts3D.Add(line.transform.InverseTransformPoint(worldPoints[i]));
 
         count = pts3D.Count;
-        if (count < 3) return false;
+        if (count < 3) return null;
 
         // Centroid in local space – used as plane origin
         Vector3 centroid = Vector3.zero;
@@ -63,7 +61,7 @@ public class MeshUtilities
         if (n.sqrMagnitude < 1e-10f)
         {
             Debug.LogError(line.name + "BuildFilledMesh - Degenerate polygon normal.");
-            return false;
+            return null;
         }
 
         n.Normalize();
@@ -104,7 +102,7 @@ public class MeshUtilities
         {
             Debug.LogError(line.name +
                            "BuildFilledMesh - Triangulation failed. Check that the polygon is simple and without self-intersections.");
-            return false;
+            return null;
         }
 
         // Ensure all triangles are CCW
@@ -116,7 +114,7 @@ public class MeshUtilities
             triangles.Add(order[trianglesWork[t]]);
 
         // 5) Build mesh
-        mesh = new Mesh { name = "FilledArea" };
+        var mesh = new Mesh { name = "FilledArea" };
         // Vertices are exactly the line points in mesh local space
         mesh.SetVertices(pts3D);
         if (pts3D.Count > 65535)
@@ -127,7 +125,7 @@ public class MeshUtilities
         if (pts3D.Count == 0)
         {
             Debug.LogError(line.name + "BuildFilledMesh - No points to build UVs.");
-            return false;
+            return null;
         }
 
         // Use working 2D polygon for UVs, but map back to original order
@@ -150,7 +148,7 @@ public class MeshUtilities
         mesh.RecalculateBounds();
 
         // Debug.Log(line.name + $"BuildFilledMesh - Mesh built. V:{pts3D.Count} T:{triangles.Count / 3}");
-        return mesh;
+        return Task.FromResult(mesh);
 
         bool EarClip_ShortestDiagonal(List<Vector2> poly, out List<int> tris)
         {
@@ -227,10 +225,10 @@ public class MeshUtilities
             for (int i = 0; i < n; i++)
             {
                 int j = (i + 1) % n;
-                a += (double) p[i].x * p[j].y - (double) p[j].x * p[i].y;
+                a += (double)p[i].x * p[j].y - (double)p[j].x * p[i].y;
             }
 
-            return (float) (0.5 * a);
+            return (float)(0.5 * a);
         }
 
         bool IsConvex(Vector2 a, Vector2 b, Vector2 c) => Cross(b - a, c - b) > 1e-8f;

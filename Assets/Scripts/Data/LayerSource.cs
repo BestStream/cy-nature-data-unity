@@ -1,4 +1,4 @@
-public class LayerSource : MonoBehaviour
+public abstract class LayerSource : MonoBehaviour
 {
     public string Id;
     public string DisplayName;
@@ -10,4 +10,8 @@ public class LayerSource : MonoBehaviour
 
     public string IdProperty;
     public string NameProperty;
+
+
+    protected bool _init;
+    public abstract void Init();
 }
