@@ -6,23 +6,16 @@ public class GeoJsonDaraManager : MonoBehaviour
 {
     [SerializeField] private string datasetName;
 
-    [Header("Service Settings")]
-    [SerializeField] private string baseService;
+    [Header("Service Settings")] [SerializeField]
+    private string baseService;
+
     [SerializeField] private int layerId;
 
-    [Header("Paging")]
-    [Tooltip("Max records per request (ArcGIS REST, default = MaxRecordCount 1000).")]
-    [SerializeField]
+    [Header("Paging")] [Tooltip("Max records per request (ArcGIS REST, default = MaxRecordCount 1000).")] [SerializeField]
     private int pageSize = 1000;
 
-    [Header("Cache Settings")]
-    [Tooltip("Relative cache folder under Assets/ (e.g. \"Cache/Cadastre\" or \"Cache/PlanningZones\").")]
-    [SerializeField]
+    [Header("Cache Settings")] [Tooltip("Relative cache folder under Assets/ (e.g. \"Cache/Cadastre\" or \"Cache/PlanningZones\").")] [SerializeField]
     private string cacheFolderName = "Cache/PlanningZones";
-
-    [Tooltip("If true, ignore cache on Start() and fetch fresh data.")]
-    [SerializeField]
-    private bool refreshOnStart = false;
 
     // Events for communication with renderer or other systems
     public event Action<string> OnChunkLoaded;
@@ -41,42 +34,26 @@ public class GeoJsonDaraManager : MonoBehaviour
         }
     }
 
-    private string GetChunkPath(int pageNumber)
-    {
-        return Path.Combine(CacheDir, $"chunk_{pageNumber:D5}.geojson");
-    }
+    private string GetChunkPath(int pageNumber) => Path.Combine(CacheDir, $"chunk_{pageNumber:D5}.geojson");
 
     private string ProgressFilePath => Path.Combine(CacheDir, "download_progress.json");
 
-    private IEnumerator Start()
-    {
-        yield return LoadOrDownload(refreshOnStart);
-    }
+    [ContextMenu("ForceRefresh")]
+    public void ForceRefresh() => StartCoroutine(DownloadAndCache());
 
-    /// <summary>
-    /// Public entry to force refresh from network at runtime (ignores cache once).
-    /// </summary>
-    public void ForceRefresh()
-    {
-        StartCoroutine(LoadOrDownload(true));
-    }
+    [ContextMenu("Refresh")]
+    public void Refresh() => StartCoroutine(LoadOrDownload());
 
-    /// <summary>
-    /// Load from cache if available (and not forced), otherwise download and cache.
-    /// </summary>
-    private IEnumerator LoadOrDownload(bool force)
+    private IEnumerator LoadOrDownload()
     {
-        if (!force && IsDownloadComplete())
-        {
-            Debug.Log("═══════════════════════════════════════════════════════════");
-            Debug.Log($"{datasetName}: Loading from cached chunks...");
-            yield return LoadFromChunks();
-            Debug.Log($"{datasetName}: ✓ All data loaded from cache successfully!");
-            Debug.Log("═══════════════════════════════════════════════════════════");
-            yield break;
-        }
+        if (!IsDownloadComplete())
+            yield return DownloadAndCache();
 
-        yield return DownloadAndCache();
+        Debug.Log("═══════════════════════════════════════════════════════════");
+        Debug.Log($"{datasetName}: Loading from cached chunks...");
+        yield return LoadFromChunks();
+        Debug.Log($"{datasetName}: ✓ All data loaded from cache successfully!");
+        Debug.Log("═══════════════════════════════════════════════════════════");
     }
 
     private bool IsDownloadComplete()
@@ -104,7 +81,7 @@ public class GeoJsonDaraManager : MonoBehaviour
             "where=1%3D1",
             "outFields=*",
             "f=geojson",
-            "outSR=4326",                 // получаем в WGS84, как и кадастр
+            "outSR=4326", // получаем в WGS84, как и кадастр
             $"resultRecordCount={pageSize}",
             $"resultOffset={offset}"
         };
@@ -147,7 +124,7 @@ public class GeoJsonDaraManager : MonoBehaviour
             using (var req = UnityWebRequest.Get(url))
             {
                 req.timeout = 10000;
-                
+
                 yield return req.SendWebRequest();
 
                 TimeSpan pageTime = DateTime.Now - pageStartTime;

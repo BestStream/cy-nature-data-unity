@@ -13,5 +13,17 @@ public abstract class LayerSource : MonoBehaviour
 
 
     protected bool _init;
-    public abstract void Init();
+
+    public virtual void Init()
+    {
+        _init = true;
+    }
+
+    public virtual void SetVisible(bool visible)
+    {
+        if (visible)
+            Init();
+
+        MapLayerRenderer.Instance.SetLayerVisible(Id, visible);
+    }
 }

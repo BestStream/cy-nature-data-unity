@@ -1,7 +1,14 @@
 public class CameraController : MonoBehaviour
 {
+    public static CameraController Instance;
+
     [Header("Targets & Layers")] [Tooltip("Camera that will be controlled. If null, this component's transform is used.")] [SerializeField]
-    private Camera _cam;
+    public Camera Cam;
+
+    [Header("Projection")] [SerializeField]
+    private float orthographicMinSize = 10f;
+
+    [SerializeField] private float orthographicMaxSize = 200f;
 
     [Tooltip("Layer mask used to raycast against the terrain/map mesh.")] [SerializeField]
     private LayerMask _mapLayerMask = ~0;
@@ -52,14 +59,17 @@ public class CameraController : MonoBehaviour
     // Cached camera reference
     private Camera cachedCamera;
 
-    private void Start()
+    private void Awake()
     {
+        Instance = this;
+
         InitializeFocusFromCurrentCamera();
+        SetProjection(false);
     }
 
     private void Update()
     {
-        _mousePositionRay = _cam.ScreenPointToRay(Input.mousePosition);
+        _mousePositionRay = Cam.ScreenPointToRay(Input.mousePosition);
 
         HandleInput();
         UpdateCameraTransform();
@@ -77,14 +87,25 @@ public class CameraController : MonoBehaviour
         if (Input.GetMouseButtonUp(0))
             isPanning = false;
 
-        if (Input.GetMouseButton(1)) // Right mouse: orbit around focus point
+        // In orthographic mode we disable camera rotation/orbiting
+        if (!Cam.orthographic && Input.GetMouseButton(1)) // Right mouse: orbit around focus point
             Orbit(mouseDelta);
 
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (Mathf.Abs(scroll) > Mathf.Epsilon)
         {
-            float factor = GetZoomFactor();
-            distance = Mathf.Clamp(distance - scroll * zoomSpeed * factor * 10f, minDistance, maxDistance);
+            if (Cam.orthographic)
+            {
+                float size = Cam.orthographicSize;
+                size -= scroll * zoomSpeed * 10f;
+                size = Mathf.Clamp(size, orthographicMinSize, orthographicMaxSize);
+                Cam.orthographicSize = size;
+            }
+            else
+            {
+                float factor = GetZoomFactor();
+                distance = Mathf.Clamp(distance - scroll * zoomSpeed * factor * 10f, minDistance, maxDistance);
+            }
         }
     }
 
@@ -117,7 +138,8 @@ public class CameraController : MonoBehaviour
 
     private float GetZoomFactor()
     {
-        if (maxDistance <= minDistance)
+        // For orthographic mode we don't scale zoom by distance.
+        if (Cam.orthographic || maxDistance <= minDistance)
             return 1f;
 
         // Normalized distance 0..1 (0 = near, 1 = far)
@@ -128,12 +150,45 @@ public class CameraController : MonoBehaviour
         return Mathf.Lerp(zoomFactorMin, zoomFactorMax, t);
     }
 
-    private void Zoom(Vector2 mouseDelta)
+    public void ToggleProjection() => SetProjection(!Cam.orthographic);
+
+    private void SetProjection(bool orthographic)
     {
-        // Use vertical mouse movement for zoom, scaled non-linearly by current distance
-        float factor = GetZoomFactor();
-        float zoomDelta = -mouseDelta.y * zoomSpeed * factor * Time.deltaTime;
-        distance = Mathf.Clamp(distance + zoomDelta, minDistance, maxDistance);
+        // Был ли режим ортографическим до переключения
+        bool wasOrthographic = Cam.orthographic;
+
+        Cam.orthographic = orthographic;
+
+        // Половина вертикального FOV в радианах (для сопоставления масштаба)
+        float halfFovRad = Cam.fieldOfView * 0.5f * Mathf.Deg2Rad;
+
+        if (Cam.orthographic)
+        {
+            pitch = 90f;
+
+            // Подгоняем ortho под текущую перспективу:
+            // orthographicSize (половина высоты в юнитах) ≈ distance * tan(FOV / 2)
+            float size = distance * Mathf.Tan(halfFovRad);
+            Cam.orthographicSize = Mathf.Clamp(size, orthographicMinSize, orthographicMaxSize);
+        }
+        else
+        {
+            pitch = 50f;
+
+            if (wasOrthographic)
+            {
+                // Возвращаемся из орто: подгоняем distance под текущий orthographicSize:
+                // distance ≈ orthographicSize / tan(FOV / 2)
+                float d = Cam.orthographicSize / Mathf.Tan(halfFovRad);
+                distance = Mathf.Clamp(d, minDistance, maxDistance);
+            }
+            else
+            {
+                // Исходная инициализация (как у тебя было)
+                distance = Vector3.Distance(Cam.transform.position, focusPoint);
+                distance = Mathf.Clamp(distance, minDistance, maxDistance);
+            }
+        }
     }
 
     private void BeginPan()
@@ -142,7 +197,7 @@ public class CameraController : MonoBehaviour
 
         // Define a plane through the current focus point, facing the camera.
         // This approximates the local ground under the cursor and makes panning scale-independent.
-        panPlane = new Plane(-_cam.transform.forward, focusPoint);
+        panPlane = new Plane(-Cam.transform.forward, focusPoint);
 
         if (panPlane.Raycast(_mousePositionRay, out var enter))
         {
@@ -183,14 +238,14 @@ public class CameraController : MonoBehaviour
         Quaternion rotation = Quaternion.Euler(pitch, yaw, 0.0f);
         Vector3 offset = rotation * new Vector3(0.0f, 0.0f, -distance);
 
-        _cam.transform.position = focusPoint + offset;
-        _cam.transform.LookAt(focusPoint);
+        Cam.transform.position = focusPoint + offset;
+        Cam.transform.LookAt(focusPoint);
     }
 
     private void InitializeFocusFromCurrentCamera()
     {
         // Try to find focus point by casting a ray from the camera forward
-        Ray ray = new Ray(_cam.transform.position, _cam.transform.forward);
+        Ray ray = new Ray(Cam.transform.position, Cam.transform.forward);
         if (Physics.Raycast(ray, out var hit, raycastHeight * 3.0f, _mapLayerMask))
         {
             focusPoint = hit.point;
@@ -198,7 +253,7 @@ public class CameraController : MonoBehaviour
         else
         {
             // Fallback: cast down from camera position
-            Vector3 origin = _cam.transform.position + Vector3.up * raycastHeight;
+            Vector3 origin = Cam.transform.position + Vector3.up * raycastHeight;
             if (Physics.Raycast(origin, Vector3.down, out hit, raycastHeight * 2.0f, _mapLayerMask))
             {
                 focusPoint = hit.point;
@@ -206,18 +261,18 @@ public class CameraController : MonoBehaviour
             else
             {
                 // Last resort: use camera position projected onto ground plane (Y = 0)
-                focusPoint = _cam.transform.position;
+                focusPoint = Cam.transform.position;
                 focusPoint.y = 0.0f;
             }
         }
 
         focusPoint = SnapToTerrain(focusPoint);
 
-        distance = Vector3.Distance(_cam.transform.position, focusPoint);
+        distance = Vector3.Distance(Cam.transform.position, focusPoint);
         distance = Mathf.Clamp(distance, minDistance, maxDistance);
 
         // Extract initial yaw/pitch from current rotation
-        Vector3 toFocus = (focusPoint - _cam.transform.position).normalized;
+        Vector3 toFocus = (focusPoint - Cam.transform.position).normalized;
         if (toFocus.sqrMagnitude > 0.0f)
         {
             Quaternion look = Quaternion.LookRotation(toFocus, Vector3.up);

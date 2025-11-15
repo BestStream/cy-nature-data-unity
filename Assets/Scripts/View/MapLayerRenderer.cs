@@ -31,6 +31,8 @@ public class MapLayerRenderer : MonoBehaviour
     {
         Instance = this;
         
+        Physics.queriesHitBackfaces = true;
+        
         Application.targetFrameRate = 60;
     }
 

@@ -1,29 +1,35 @@
 public class MainScreen : MonoBehaviour
 {
-    [SerializeField] private Toggle togglePrefab;
-
-    [SerializeField] private List<LayerSource> layers = new();
+    [SerializeField] private Toggle _layerTogglePrefab;
+    [SerializeField] private Button _camProjectionButton;
 
     // private readonly List<Toggle> _toggles = new();
 
     private void Awake()
     {
-        togglePrefab.gameObject.SetActive(false);
+        _layerTogglePrefab.gameObject.SetActive(false);
     }
 
     private void Start()
     {
-        CreateToggles();
+        CreateLayerToggles();
+
+        CamProjectionButtonTextUpdate();
+        _camProjectionButton.onClick.AddListener(() =>
+        {
+            CameraController.Instance.ToggleProjection();
+            CamProjectionButtonTextUpdate();
+        });
+        
+        void CamProjectionButtonTextUpdate() => 
+            _camProjectionButton.GetComponent<Text>()?.SetText(CameraController.Instance.Cam.orthographic ? "Ortho" : "Pers");
     }
 
-    private void CreateToggles()
+    private void CreateLayerToggles()
     {
-        foreach (var layer in layers)
+        foreach (var layer in MapLayerRenderer.Instance.GetComponentsInChildren<LayerSource>())
         {
-            if(!layer.gameObject.activeSelf)
-                continue;
-            
-            var toggle = Instantiate(togglePrefab, togglePrefab.transform.parent);
+            var toggle = Instantiate(_layerTogglePrefab, _layerTogglePrefab.transform.parent);
             toggle.name = $"LayerToggle {layer.Id}";
             toggle.gameObject.SetActive(true);
 
@@ -32,13 +38,7 @@ public class MainScreen : MonoBehaviour
             toggle.isOn = false;
 
             var l = layer;
-            toggle.onValueChanged.AddListener(isOn =>
-            {
-                if (isOn)
-                    l.Init();
-                
-                MapLayerRenderer.Instance.SetLayerVisible(l.Id, isOn);
-            });
+            toggle.onValueChanged.AddListener(isOn => l.SetVisible(isOn));
 
             // _toggles.Add(toggle);
         }

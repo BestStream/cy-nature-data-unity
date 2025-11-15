@@ -36,7 +36,7 @@ public class Area : MonoBehaviour
 
         SetupLabel();
 
-        Invoke(nameof(SetupMesh), Random.Range(0.1f, 9.9f));
+        SetupMesh();
 
         return this;
     }
@@ -66,7 +66,7 @@ public class Area : MonoBehaviour
 
     private void SetupLabel()
     {
-        _label.gameObject.SetActive(!string.IsNullOrEmpty(_feature.Name));
+        _label.gameObject.SetActive(false);
         if (!string.IsNullOrEmpty(_feature.Name))
         {
             _label.transform.position = MapLayerRenderer.Instance.SnapToTerrainWorld(ComputeCentroidXZ(_worldPoints)) + labelOffset;
@@ -158,19 +158,18 @@ public class Area : MonoBehaviour
         return new Vector3((float)cx, 0f, (float)cz);
     }
 
-    private void SetupMesh()
+    private async void SetupMesh()
     {
         _meshRenderer.sharedMaterial = _layer.FillMaterial;
-
-        MeshUtilities.BuildFilledMesh(_line).ContinueWith(task =>
-        {
-            if (task.IsCompleted && task.Result != null)
-                _meshCollider.sharedMesh = _meshFilter.sharedMesh = task.Result;
-        }, TaskScheduler.FromCurrentSynchronizationContext());
+        
+        var mesh = await MeshUtilities.BuildFilledMesh(_line);
+        if (mesh != null)
+            _meshCollider.sharedMesh = _meshFilter.sharedMesh = mesh;
     }
 
     public void MeshVisibility(bool visibility)
     {
         _meshRenderer.enabled = visibility;
+        _label.gameObject.SetActive(visibility);
     }
 }
