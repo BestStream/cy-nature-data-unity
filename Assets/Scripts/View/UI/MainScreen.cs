@@ -3,17 +3,18 @@ public class MainScreen : MonoBehaviour
     [SerializeField] private Toggle _layerTogglePrefab;
     [SerializeField] private Button _camProjectionButton;
     [SerializeField] private InputField _addLayerInputField;
-    [SerializeField] private GameObject CreatingAreaTooltip;
+    [SerializeField] private GameObject _creatingAreaTooltip;
 
     // private readonly List<Toggle> _toggles = new();
 
     private void Start()
     {
         _layerTogglePrefab.gameObject.SetActive(false);
+        _creatingAreaTooltip.gameObject.SetActive(false);
 
         foreach (var layer in MapLayerRenderer.Instance.GetComponentsInChildren<LayerSource>())
             CreateLayerToggle(layer);
-
+        
         CamProjectionButtonTextUpdate();
         _camProjectionButton.onClick.AddListener(() =>
         {
@@ -22,7 +23,7 @@ public class MainScreen : MonoBehaviour
         });
 
         void CamProjectionButtonTextUpdate() =>
-            _camProjectionButton.GetComponent<Text>()?.SetText(CameraController.Instance.Cam.orthographic ? "Ortho" : "Pers");
+            _camProjectionButton.GetComponentInChildren<Text>()?.SetText(CameraController.Instance.Cam.orthographic ? "Ortho" : "Pers");
 
         _addLayerInputField.onEndEdit.AddListener(text =>
         {
@@ -56,12 +57,12 @@ public class MainScreen : MonoBehaviour
 
             _addLayerInputField.SetTextWithoutNotify(string.Empty);
             _addLayerInputField.gameObject.SetActive(false);
-            CreatingAreaTooltip.SetActive(true);
+            _creatingAreaTooltip.SetActive(true);
 
             CameraController.Instance.StartAreaDraw(area, () =>
             {
                 _addLayerInputField.gameObject.SetActive(true);
-                CreatingAreaTooltip.SetActive(false);
+                _creatingAreaTooltip.SetActive(false);
             });
         });
     }

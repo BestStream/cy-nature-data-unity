@@ -112,4 +112,18 @@ public class MapLayerRenderer : MonoBehaviour
 
         return flatPos;
     }
+    
+    public Vector2 ToLonLat(Vector3 worldPos)
+    {
+        double xMeters = worldPos.x / unityScale;
+        double zMeters = worldPos.z / unityScale;
+        
+        double dLon = xMeters / metersPerDegree;
+        double dLat = zMeters / metersPerDegree;
+
+        double lat = centerLat + dLat;
+        double lon = centerLon + dLon / System.Math.Cos(centerLat * System.Math.PI / 180.0);
+
+        return new Vector2((float)lon, (float)lat);
+    }
 }

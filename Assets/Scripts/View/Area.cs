@@ -31,13 +31,13 @@ public class Area : MonoBehaviour
         _feature = feature;
 
         name = $"{_feature.Name} ({_feature.Id})";
-        
+
         _line.loop = true;
         _line.useWorldSpace = true;
         _line.widthMultiplier = _layer.LineWidth > 0 ? _layer.LineWidth * _lineWidth : _lineWidth;
         _line.sharedMaterial = _layer.LineMaterial;
         if (_feature.Geometry.CoordinatesLonLat.Count > 0)
-            LineFromCoordinates(_feature.Geometry.CoordinatesLonLat[0]); // Берём только внешнее кольцо для начала
+            CoordinatesToLine(_feature.Geometry.CoordinatesLonLat[0]); // Берём только внешнее кольцо для начала
 
         _label.gameObject.SetActive(false);
         _label.text = _feature.Name;
@@ -48,22 +48,6 @@ public class Area : MonoBehaviour
         RebuildMesh();
 
         return this;
-    }
-
-    private void LineFromCoordinates(List<Vector2> ringLonLat)
-    {
-        _worldPoints = new List<Vector3>(ringLonLat.Count);
-        _line.positionCount = ringLonLat.Count;
-        
-        for (int i = 0; i < ringLonLat.Count; i++)
-        {
-            var world = MapLayerRenderer.Instance.ToUnityPositionOnTerrain(ringLonLat[i].x, ringLonLat[i].y);
-            _worldPoints.Add(world);
-            _line.SetPosition(i, world);
-        }
-
-        if (_layer.LineSimplifyTolerance > 0f)
-            _line.Simplify(_layer.LineSimplifyTolerance);
     }
 
     private void RebuildLabel()
@@ -188,5 +172,34 @@ public class Area : MonoBehaviour
             RebuildLabel();
             RebuildMesh();
         }
+    }
+    
+    private void CoordinatesToLine(List<Vector2> ringLonLat)
+    {
+        _worldPoints = new List<Vector3>(ringLonLat.Count);
+        _line.positionCount = ringLonLat.Count;
+
+        for (int i = 0; i < ringLonLat.Count; i++)
+        {
+            var world = MapLayerRenderer.Instance.ToUnityPositionOnTerrain(ringLonLat[i].x, ringLonLat[i].y);
+            _worldPoints.Add(world);
+            _line.SetPosition(i, world);
+        }
+
+        if (_layer.LineSimplifyTolerance > 0f)
+            _line.Simplify(_layer.LineSimplifyTolerance);
+    }
+
+    public List<Vector2> LineToCoordinates()
+    {
+        var coordinatesLonLat = new List<Vector2>(_line.positionCount);
+
+        for (int i = 0; i < _line.positionCount; i++)
+        {
+            var lonlat = MapLayerRenderer.Instance.ToLonLat(_line.GetPosition(i));
+            coordinatesLonLat.Add(lonlat);
+        }
+
+        return coordinatesLonLat;
     }
 }
