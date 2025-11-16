@@ -2,8 +2,11 @@ public class ImageMapLayer : MapLayer
 {
     [SerializeField] private MeshRenderer _meshRenderer;
     
-    public override void SetVisible(bool visible)
+    public override void Init()
     {
-        _meshRenderer.enabled = visible;
+        if (_init)
+            return;
+        
+        _init = true;
     }
 }

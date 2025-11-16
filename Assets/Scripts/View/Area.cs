@@ -53,7 +53,7 @@ public class Area : MonoBehaviour
     private void RebuildLabel()
     {
         _label.transform.position = MapLayerRenderer.Instance.SnapToTerrainWorld(ComputeCentroidXZ(_worldPoints)) + labelOffset;
-        _label.characterSize = ComputeAutoLabelSize(_worldPoints);
+        _label.characterSize = 0.1f;// ComputeAutoLabelSize(_worldPoints);
     }
 
     private float ComputeAutoLabelSize(List<Vector3> pts)

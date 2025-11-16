@@ -242,7 +242,7 @@ MonoBehaviour:
   _meshCollider: {fileID: 4107956040674009437}
   labelBaseSize: 0.001
   labelExtentFactor: 0.02
-  _lineWidth: 0.01
+  _lineWidth: 0.005
   labelOffset: {x: 0, y: 0, z: 0}
 --- !u!1 &4718191167558596285
 GameObject:

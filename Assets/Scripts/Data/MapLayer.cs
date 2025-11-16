@@ -56,6 +56,15 @@ public class MapLayer : MonoBehaviour
 
     public virtual void Init()
     {
+        if (_init)
+            return;
+        
+        LineMaterial = new Material(MapLayerRenderer.Instance.lineMaterialTemplate);
+        LineMaterial.SetColor("_BaseColor", Color);
+
+        FillMaterial = new Material(MapLayerRenderer.Instance.fillMaterialTemplate);
+        FillMaterial.SetColor("_BaseColor", new Color(Color.r, Color.g, Color.b, _fillMaterialTransparency));
+
         foreach (var area in Areas) // if there are cached areas
         {
             var feature = new MapFeature
@@ -68,13 +77,7 @@ public class MapLayer : MonoBehaviour
 
             area.Setup(this, feature);
         }
-
-        LineMaterial = new Material(MapLayerRenderer.Instance.lineMaterialTemplate);
-        LineMaterial.SetColor("_BaseColor", Color);
-
-        FillMaterial = new Material(MapLayerRenderer.Instance.fillMaterialTemplate);
-        FillMaterial.SetColor("_BaseColor", new Color(Color.r, Color.g, Color.b, _fillMaterialTransparency));
-
+        
         _init = true;
     }
 

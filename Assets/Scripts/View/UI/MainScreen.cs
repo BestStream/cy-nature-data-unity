@@ -12,9 +12,9 @@ public class MainScreen : MonoBehaviour
         _layerTogglePrefab.gameObject.SetActive(false);
         _creatingAreaTooltip.gameObject.SetActive(false);
 
-        foreach (var layer in MapLayerRenderer.Instance.GetComponentsInChildren<MapLayer>())
+        foreach (var layer in MapLayerRenderer.Instance.GetComponentsInChildren<MapLayer>(includeInactive: true))
             CreateLayerToggle(layer);
-        
+
         CamProjectionButtonTextUpdate();
         _camProjectionButton.onClick.AddListener(() =>
         {
@@ -36,17 +36,17 @@ public class MainScreen : MonoBehaviour
             var layer = go.AddComponent<MapLayer>();
             layer.Id = layer.DisplayName = text;
             layer.Color = Color.white;
+            layer.LineWidth = 4;
+            
+            layer.Init();
 
             CreateLayerToggle(layer, true);
-            
+
             var feature = new MapFeature()
             {
                 Id = layer.Id,
                 Name = layer.DisplayName,
-                Geometry = new MapGeometry
-                {
-                    Type = GeometryType.Polygon
-                }
+                Geometry = new MapGeometry { Type = GeometryType.Polygon }
             };
             layer.Features.Add(feature);
 
@@ -69,7 +69,7 @@ public class MainScreen : MonoBehaviour
     {
         var layerToggle = Instantiate(_layerTogglePrefab, _layerTogglePrefab.transform.parent).Setup(mapLayer, toggled);
         // _toggles.Add(layerToggle);
-        
+
         _addLayerInputField.transform.SetAsLastSibling();
     }
 }

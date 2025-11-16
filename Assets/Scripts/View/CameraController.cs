@@ -93,7 +93,24 @@ public class CameraController : MonoBehaviour
         if (!Cam.orthographic && Input.GetMouseButton(1)) // Right mouse: orbit around focus point
             Orbit(mouseDelta);
 
-        float scroll = Input.GetAxis("Mouse ScrollWheel");
+        Zoom(Input.GetAxis("Mouse ScrollWheel"));
+
+        if (_drawArea != null)
+        {
+            if (Input.GetMouseButtonDown(2)) // Add new point to area
+            {
+                if (Physics.Raycast(_mousePositionRay, out var hit, Mathf.Infinity, _mapLayerMask))
+                    _drawArea.AddPoint(hit.point);
+            }
+            else if (Input.GetKeyUp(KeyCode.Escape)) // Finished building area
+            {
+                _drawArea = null;
+            }
+        }
+    }
+
+    private void Zoom(float scroll)
+    {
         if (Mathf.Abs(scroll) > Mathf.Epsilon)
         {
             if (Cam.orthographic)
@@ -107,19 +124,6 @@ public class CameraController : MonoBehaviour
             {
                 float factor = GetZoomFactor();
                 distance = Mathf.Clamp(distance - scroll * zoomSpeed * factor * 10f, minDistance, maxDistance);
-            }
-        }
-
-        if (_drawArea != null)
-        {
-            if (Input.GetMouseButtonDown(2)) // Add new point to area
-            {
-                if (Physics.Raycast(_mousePositionRay, out var hit, Mathf.Infinity, _mapLayerMask))
-                    _drawArea.AddPoint(hit.point);
-            }
-            else if (Input.GetKeyUp(KeyCode.Escape)) // Finished building area
-            {
-                _drawArea = null;
             }
         }
     }
