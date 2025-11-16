@@ -23,7 +23,7 @@ public class MainScreen : MonoBehaviour
         });
 
         void CamProjectionButtonTextUpdate() =>
-            _camProjectionButton.GetComponentInChildren<Text>()?.SetText(CameraController.Instance.Cam.orthographic ? "Ortho" : "Pers");
+            _camProjectionButton.GetComponentInChildren<Text>()?.SetText(CameraController.Instance.Cam.orthographic ? "Ortho" : "Persp");
 
         _addLayerInputField.onEndEdit.AddListener(text =>
         {
