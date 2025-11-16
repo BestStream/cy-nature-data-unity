@@ -23,7 +23,7 @@ public class Area : MonoBehaviour
 
     private MapLayer _layer;
     private MapFeature _feature;
-    private List<Vector3> _worldPoints;
+    private List<Vector3> _worldPoints = new();
 
     public Area Setup(MapLayer layer, MapFeature feature)
     {
@@ -31,28 +31,30 @@ public class Area : MonoBehaviour
         _feature = feature;
 
         name = $"{_feature.Name} ({_feature.Id})";
-
-        SetupLine();
-
-        SetupLabel();
-
-        SetupMesh();
-
-        return this;
-    }
-
-    private void SetupLine()
-    {
-        var ringLonLat = _feature.Geometry.CoordinatesLonLat[0]; // Берём только внешнее кольцо для начала
-
-        _line.positionCount = ringLonLat.Count;
+        
         _line.loop = true;
         _line.useWorldSpace = true;
         _line.widthMultiplier = _layer.LineWidth > 0 ? _layer.LineWidth * _lineWidth : _lineWidth;
         _line.sharedMaterial = _layer.LineMaterial;
+        if (_feature.Geometry.CoordinatesLonLat.Count > 0)
+            LineFromCoordinates(_feature.Geometry.CoordinatesLonLat[0]); // Берём только внешнее кольцо для начала
 
+        _label.gameObject.SetActive(false);
+        _label.text = _feature.Name;
+        _label.color = _layer.Color;
+        RebuildLabel();
+
+        _meshRenderer.sharedMaterial = _layer.FillMaterial;
+        RebuildMesh();
+
+        return this;
+    }
+
+    private void LineFromCoordinates(List<Vector2> ringLonLat)
+    {
         _worldPoints = new List<Vector3>(ringLonLat.Count);
-
+        _line.positionCount = ringLonLat.Count;
+        
         for (int i = 0; i < ringLonLat.Count; i++)
         {
             var world = MapLayerRenderer.Instance.ToUnityPositionOnTerrain(ringLonLat[i].x, ringLonLat[i].y);
@@ -64,16 +66,10 @@ public class Area : MonoBehaviour
             _line.Simplify(_layer.LineSimplifyTolerance);
     }
 
-    private void SetupLabel()
+    private void RebuildLabel()
     {
-        _label.gameObject.SetActive(false);
-        if (!string.IsNullOrEmpty(_feature.Name))
-        {
-            _label.transform.position = MapLayerRenderer.Instance.SnapToTerrainWorld(ComputeCentroidXZ(_worldPoints)) + labelOffset;
-            _label.text = _feature.Name;
-            _label.characterSize = ComputeAutoLabelSize(_worldPoints);
-            _label.color = _layer.Color;
-        }
+        _label.transform.position = MapLayerRenderer.Instance.SnapToTerrainWorld(ComputeCentroidXZ(_worldPoints)) + labelOffset;
+        _label.characterSize = ComputeAutoLabelSize(_worldPoints);
     }
 
     private float ComputeAutoLabelSize(List<Vector3> pts)
@@ -116,20 +112,20 @@ public class Area : MonoBehaviour
 
     private Vector3 ComputeCentroidXZ(List<Vector3> pts)
     {
-        int n = pts.Count;
-        if (n == 0)
+        if (pts == null || pts.Count == 0)
             return Vector3.zero;
-        if (n == 1)
+
+        if (pts.Count == 1)
             return pts[0];
 
         double area = 0;
         double cx = 0;
         double cz = 0;
 
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < pts.Count; i++)
         {
             Vector3 p0 = pts[i];
-            Vector3 p1 = pts[(i + 1) % n];
+            Vector3 p1 = pts[(i + 1) % pts.Count];
 
             double x0 = p0.x;
             double z0 = p0.z;
@@ -149,7 +145,7 @@ public class Area : MonoBehaviour
             Vector3 sum = Vector3.zero;
             foreach (var p in pts)
                 sum += p;
-            return sum / n;
+            return sum / pts.Count;
         }
 
         cx /= (6.0 * area);
@@ -158,10 +154,14 @@ public class Area : MonoBehaviour
         return new Vector3((float)cx, 0f, (float)cz);
     }
 
-    private async void SetupMesh()
+    private async void RebuildMesh()
     {
-        _meshRenderer.sharedMaterial = _layer.FillMaterial;
-        
+        if (_line.positionCount < 3)
+        {
+            _meshFilter.sharedMesh = _meshCollider.sharedMesh = null;
+            return;
+        }
+
         var mesh = await MeshUtilities.BuildFilledMesh(_line);
         if (mesh != null)
             _meshCollider.sharedMesh = _meshFilter.sharedMesh = mesh;
@@ -170,6 +170,23 @@ public class Area : MonoBehaviour
     public void MeshVisibility(bool visibility)
     {
         _meshRenderer.enabled = visibility;
-        _label.gameObject.SetActive(visibility);
+        _label.gameObject.SetActive(visibility && !string.IsNullOrEmpty(_label.text));
+    }
+
+    public void AddPoint(Vector3 point)
+    {
+        _worldPoints.Add(point);
+
+        _line.positionCount = _worldPoints.Count;
+        _line.loop = _worldPoints.Count > 2;
+
+        for (int i = 0; i < _worldPoints.Count; i++)
+            _line.SetPosition(i, _worldPoints[i]);
+
+        if (_worldPoints.Count >= 3)
+        {
+            RebuildLabel();
+            RebuildMesh();
+        }
     }
 }

@@ -4,34 +4,26 @@ using System.Xml;
 public class KmlLayerSource : LayerSource
 {
     [SerializeField] private TextAsset _dataSource;
-    
+
     public override void Init()
     {
-        if(_init)
+        if (_init)
             return;
-        
+
         if (_dataSource == null)
         {
             Debug.LogError("Kml is not assigned");
             return;
         }
-        
+
         MapLayerRenderer.Instance.RenderLayer(LoadLayer());
-        
-        _init =  true;
+
+        _init = true;
     }
 
     private MapLayer LoadLayer()
     {
-        var layer = new MapLayer
-        {
-            Id = Id,
-            DisplayName = DisplayName,
-            Visible = true,
-            Color = Color,
-            LineWidth = LineWidth,
-            LineSimplifyTolerance = LineSimplifyTolerance
-        };
+        var layer = new MapLayer(this);
 
         var xml = new XmlDocument();
         try
@@ -152,7 +144,7 @@ public class KmlLayerSource : LayerSource
             if (!double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out double lat))
                 continue;
 
-            ring.Add(new Vector2((float) lon, (float) lat));
+            ring.Add(new Vector2((float)lon, (float)lat));
         }
 
         return ring;

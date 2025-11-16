@@ -73,7 +73,9 @@ public class CameraController : MonoBehaviour
 
         HandleInput();
         UpdateCameraTransform();
-        HandleHover();
+
+        if (_drawArea == null)
+            HandleHover();
     }
 
     private void HandleInput()
@@ -107,6 +109,19 @@ public class CameraController : MonoBehaviour
                 distance = Mathf.Clamp(distance - scroll * zoomSpeed * factor * 10f, minDistance, maxDistance);
             }
         }
+
+        if (_drawArea != null)
+        {
+            if (Input.GetMouseButtonDown(2)) // Add new point to area
+            {
+                if (Physics.Raycast(_mousePositionRay, out var hit, Mathf.Infinity, _mapLayerMask))
+                    _drawArea.AddPoint(hit.point);
+            }
+            else if (Input.GetKeyUp(KeyCode.Escape)) // Finished building area
+            {
+                _drawArea = null;
+            }
+        }
     }
 
     private void HandleHover()
@@ -124,16 +139,6 @@ public class CameraController : MonoBehaviour
             HoveredAreaHide();
             HoveredAreaShow(area);
         }
-
-        void HoveredAreaShow(Area area)
-        {
-            _hoveredArea = area;
-            _hoveredArea.MeshVisibility(true);
-        }
-
-        void HoveredAreaHide() => _hoveredArea?.MeshVisibility(false);
-
-        void HoveredAreaClear() => _hoveredArea = null;
     }
 
     private float GetZoomFactor()
@@ -289,5 +294,33 @@ public class CameraController : MonoBehaviour
             return hit.point;
 
         return worldPos;
+    }
+
+    private  void HoveredAreaShow(Area area)
+    {
+        _hoveredArea = area;
+        _hoveredArea.MeshVisibility(true);
+    }
+
+    private void HoveredAreaHide() => _hoveredArea?.MeshVisibility(false);
+
+    private void HoveredAreaClear() => _hoveredArea = null;
+    
+    private Area _drawArea;
+    public void StartAreaDraw(Area area, Action callback = null)
+    {
+        HoveredAreaHide();
+        HoveredAreaClear();
+        
+        _drawArea = area;
+        _drawArea.MeshVisibility(true);
+
+        StartCoroutine(WaitForAreaCompleted());
+        IEnumerator WaitForAreaCompleted()
+        {
+            while (_drawArea != null)
+                yield return null;
+            callback?.Invoke();
+        }
     }
 }

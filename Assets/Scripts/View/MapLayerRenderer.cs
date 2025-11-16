@@ -1,9 +1,10 @@
 public class MapLayerRenderer : MonoBehaviour
 {
     public static MapLayerRenderer Instance;
-    
+
     [Header("Material Templates")]
-    public Material lineMaterialTemplate, fillMaterialTemplate; 
+    public Material lineMaterialTemplate;
+    public Material fillMaterialTemplate; 
 
     [Header("Terrain Projection")] [Tooltip("Layer mask used to raycast against the terrain mesh")] [SerializeField]
     private LayerMask terrainLayerMask = ~0;
@@ -23,7 +24,7 @@ public class MapLayerRenderer : MonoBehaviour
     [Tooltip("Scale: 1 meter in real world to Unity units")] [SerializeField]
     private float unityScale = 0.001f; // 1 km = 1 unity unit
 
-    [Header("Rendering")] [SerializeField] private Area areaPrefab;
+    public Area AreaPrefab;
 
     private readonly Dictionary<string, GameObject> _layerRoots = new();
 
@@ -39,18 +40,6 @@ public class MapLayerRenderer : MonoBehaviour
     public void RenderLayer(MapLayer layer)
     {
         if (layer == null) return;
-
-        if (layer.LineMaterial == null)
-        {
-            layer.LineMaterial = new Material(lineMaterialTemplate);
-            layer.LineMaterial.SetColor("_BaseColor", layer.Color);
-        }
-        
-        if (layer.FillMaterial == null)
-        {
-            layer.FillMaterial = new Material(fillMaterialTemplate);
-            layer.FillMaterial.SetColor("_BaseColor", new Color(layer.Color.r, layer.Color.g, layer.Color.b, 0.2f));
-        }
         
         if (_layerRoots.TryGetValue(layer.Id, out var existingRoot))
         {
@@ -88,7 +77,7 @@ public class MapLayerRenderer : MonoBehaviour
         if (feature.Geometry.CoordinatesLonLat.Count == 0 || feature.Geometry.CoordinatesLonLat[0].Count < 2)
             return;
         
-        var area = Instantiate(areaPrefab, parent).Setup(layer, feature);
+        var area = Instantiate(AreaPrefab, parent).Setup(layer, feature);
     }
 
     public Vector3 SnapToTerrainWorld(Vector3 worldPos)

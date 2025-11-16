@@ -32,15 +32,7 @@ public class GeoJsonLayerSource : LayerSource
         }
 
         // Собираем единый слой "cadastre" из всех чанков
-        var combinedLayer = new MapLayer
-        {
-            Id = Id,
-            DisplayName = DisplayName,
-            Visible = true,
-            Color = Color,
-            LineWidth = LineWidth,
-            LineSimplifyTolerance = LineSimplifyTolerance
-        };
+        var combinedLayer = new MapLayer(this);
 
         foreach (var json in chunks)
         {
@@ -61,15 +53,7 @@ public class GeoJsonLayerSource : LayerSource
 
     public MapLayer LoadLayer(string geoJson)
     {
-        var layer = new MapLayer
-        {
-            Id = Id,
-            DisplayName = DisplayName,
-            Visible = true,
-            Color = Color,
-            LineWidth = LineWidth,
-            LineSimplifyTolerance = LineSimplifyTolerance
-        };
+        var layer = new MapLayer(this);
 
         if (string.IsNullOrWhiteSpace(geoJson))
         {

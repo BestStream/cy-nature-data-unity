@@ -22,4 +22,4 @@ global using GridLayoutGroup = UnityEngine.UI.GridLayoutGroup;
 global using Button = UnityEngine.UI.Button;
 global using Text = TMPro.TextMeshProUGUI; // global using Text = UnityEngine.UI.Text;
 global using Dropdown = UnityEngine.UI.Dropdown;
-global using InputField = UnityEngine.UI.InputField;
+global using InputField = TMPro.TMP_InputField; // global using InputField = UnityEngine.UI.InputField;

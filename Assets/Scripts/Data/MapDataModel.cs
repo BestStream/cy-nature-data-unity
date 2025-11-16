@@ -1,4 +1,9 @@
-public enum GeometryType { Point, LineString, Polygon }
+public enum GeometryType
+{
+    Point,
+    LineString,
+    Polygon
+}
 
 public class MapGeometry
 {
@@ -33,6 +38,21 @@ public class MapLayer
     public List<MapFeature> Features { get; } = new();
 
     public bool Visible = true;
-    
+
     public Material LineMaterial, FillMaterial;
+
+    public MapLayer(LayerSource source)
+    {
+        Id = source.Id;
+        DisplayName = source.DisplayName;
+        Color = source.Color;
+        LineWidth = source.LineWidth;
+        LineSimplifyTolerance = source.LineSimplifyTolerance;
+
+        LineMaterial = new Material(MapLayerRenderer.Instance.lineMaterialTemplate);
+        LineMaterial.SetColor("_BaseColor", Color);
+
+        FillMaterial = new Material(MapLayerRenderer.Instance.fillMaterialTemplate);
+        FillMaterial.SetColor("_BaseColor", new Color(Color.r, Color.g, Color.b, 0.2f));
+    }
 }
