@@ -1,18 +1,18 @@
 public class MainScreen : MonoBehaviour
 {
-    [SerializeField] private Toggle _layerTogglePrefab;
+    [SerializeField] private LayerToggle _layerTogglePrefab;
     [SerializeField] private Button _camProjectionButton;
     [SerializeField] private InputField _addLayerInputField;
     [SerializeField] private GameObject _creatingAreaTooltip;
 
-    // private readonly List<Toggle> _toggles = new();
+    // private readonly List<LayerToggle> _toggles = new();
 
     private void Start()
     {
         _layerTogglePrefab.gameObject.SetActive(false);
         _creatingAreaTooltip.gameObject.SetActive(false);
 
-        foreach (var layer in MapLayerRenderer.Instance.GetComponentsInChildren<LayerSource>())
+        foreach (var layer in MapLayerRenderer.Instance.GetComponentsInChildren<MapLayer>())
             CreateLayerToggle(layer);
         
         CamProjectionButtonTextUpdate();
@@ -33,18 +33,16 @@ public class MainScreen : MonoBehaviour
             var go = new GameObject(text);
             go.transform.SetParent(MapLayerRenderer.Instance.transform);
 
-            var source = go.AddComponent<AreaLayerSource>();
-            source.Id = source.DisplayName = text;
-            source.Color = Color.white;
+            var layer = go.AddComponent<MapLayer>();
+            layer.Id = layer.DisplayName = text;
+            layer.Color = Color.white;
 
-            CreateLayerToggle(source, true);
-
-            var layer = new MapLayer(source);
-
+            CreateLayerToggle(layer, true);
+            
             var feature = new MapFeature()
             {
-                Id = source.Id,
-                Name = source.DisplayName,
+                Id = layer.Id,
+                Name = layer.DisplayName,
                 Geometry = new MapGeometry
                 {
                     Type = GeometryType.Polygon
@@ -52,8 +50,8 @@ public class MainScreen : MonoBehaviour
             };
             layer.Features.Add(feature);
 
-            var area = Instantiate(MapLayerRenderer.Instance.AreaPrefab, source.transform).Setup(layer, feature);
-            source.Areas.Add(area);
+            var area = Instantiate(MapLayerRenderer.Instance.AreaPrefab, layer.transform).Setup(layer, feature);
+            layer.Areas.Add(area);
 
             _addLayerInputField.SetTextWithoutNotify(string.Empty);
             _addLayerInputField.gameObject.SetActive(false);
@@ -67,21 +65,11 @@ public class MainScreen : MonoBehaviour
         });
     }
 
-    private void CreateLayerToggle(LayerSource layer, bool toggled = false)
+    private void CreateLayerToggle(MapLayer mapLayer, bool toggled = false)
     {
-        var toggle = Instantiate(_layerTogglePrefab, _layerTogglePrefab.transform.parent);
-        toggle.name = $"LayerToggle {layer.Id}";
-        toggle.gameObject.SetActive(true);
-
-        toggle.GetComponentInChildren<Text>()?.SetText(layer.DisplayName);
-
-        toggle.isOn = toggled;
-
-        var l = layer;
-        toggle.onValueChanged.AddListener(isOn => l.SetVisible(isOn));
-
+        var layerToggle = Instantiate(_layerTogglePrefab, _layerTogglePrefab.transform.parent).Setup(mapLayer, toggled);
+        // _toggles.Add(layerToggle);
+        
         _addLayerInputField.transform.SetAsLastSibling();
-
-        // _toggles.Add(toggle);
     }
 }

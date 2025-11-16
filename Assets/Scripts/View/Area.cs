@@ -25,9 +25,9 @@ public class Area : MonoBehaviour
     private MapFeature _feature;
     private List<Vector3> _worldPoints = new();
 
-    public Area Setup(MapLayer layer, MapFeature feature)
+    public Area Setup(MapLayer mapLayer, MapFeature feature)
     {
-        _layer = layer;
+        _layer = mapLayer;
         _feature = feature;
 
         name = $"{_feature.Name} ({_feature.Id})";
@@ -151,10 +151,13 @@ public class Area : MonoBehaviour
             _meshCollider.sharedMesh = _meshFilter.sharedMesh = mesh;
     }
 
-    public void MeshVisibility(bool visibility)
+    public void Highlight(bool highlighted)
     {
-        _meshRenderer.enabled = visibility;
-        _label.gameObject.SetActive(visibility && !string.IsNullOrEmpty(_label.text));
+        if(!highlighted && _layer.ForceHighlight)
+            return;
+        
+        _meshRenderer.enabled = highlighted;
+        _label.gameObject.SetActive(highlighted && !string.IsNullOrEmpty(_label.text));
     }
 
     public void AddPoint(Vector3 point)
@@ -201,5 +204,138 @@ public class Area : MonoBehaviour
         }
 
         return coordinatesLonLat;
+    }
+    /// <summary>
+    /// Computes the geometric intersection of two or more Areas and returns the resulting polygon as a list of lon/lat coordinates (single outer ring).
+    /// If there is no common intersection, returns an empty list.
+    /// </summary>
+    public static List<Vector2> ComputeIntersectionLonLat(IList<Area> areas)
+    {
+        if (areas == null || areas.Count == 0)
+            return new List<Vector2>();
+
+        // Start from the first area's polygon
+        var result = new List<Vector2>(areas[0].LineToCoordinates());
+        EnsureCounterClockwise(result);
+
+        for (int i = 1; i < areas.Count && result.Count > 0; i++)
+        {
+            var clip = new List<Vector2>(areas[i].LineToCoordinates());
+            EnsureCounterClockwise(clip);
+
+            result = ClipPolygonWithPolygon(result, clip);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Sutherland–Hodgman polygon clipping: clips subject polygon by a convex clip polygon. Both polygons must be in CCW winding order.
+    /// </summary>
+    private static List<Vector2> ClipPolygonWithPolygon(List<Vector2> subject, List<Vector2> clip)
+    {
+        if (subject == null || subject.Count == 0 || clip == null || clip.Count == 0)
+            return new List<Vector2>();
+
+        var outputList = new List<Vector2>(subject);
+
+        for (int i = 0; i < clip.Count; i++)
+        {
+            var clipA = clip[i];
+            var clipB = clip[(i + 1) % clip.Count];
+
+            var inputList = outputList;
+            outputList = new List<Vector2>();
+
+            if (inputList.Count == 0)
+                break;
+
+            var S = inputList[inputList.Count - 1];
+            for (int j = 0; j < inputList.Count; j++)
+            {
+                var E = inputList[j];
+
+                bool E_inside = IsInside(E, clipA, clipB);
+                bool S_inside = IsInside(S, clipA, clipB);
+
+                if (E_inside)
+                {
+                    if (!S_inside)
+                    {
+                        if (LineIntersection(S, E, clipA, clipB, out var inter))
+                            outputList.Add(inter);
+                    }
+                    outputList.Add(E);
+                }
+                else if (S_inside)
+                {
+                    if (LineIntersection(S, E, clipA, clipB, out var inter))
+                        outputList.Add(inter);
+                }
+
+                S = E;
+            }
+        }
+
+        return outputList;
+    }
+
+    /// <summary>
+    /// Returns true if point p is on the left side of the directed edge (a -> b).
+    /// Assumes CCW winding for the clip polygon.
+    /// </summary>
+    private static bool IsInside(Vector2 p, Vector2 a, Vector2 b)
+    {
+        return Cross(b - a, p - a) >= 0f;
+    }
+
+    private static float Cross(Vector2 a, Vector2 b)
+    {
+        return a.x * b.y - a.y * b.x;
+    }
+
+    /// <summary>
+    /// Computes the intersection point between two line segments (p1->p2) and (p3->p4).
+    /// Returns true if they intersect (infinite lines), result is stored in 'intersection'.
+    /// </summary>
+    private static bool LineIntersection(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4, out Vector2 intersection)
+    {
+        intersection = Vector2.zero;
+
+        var d1 = p2 - p1;
+        var d2 = p4 - p3;
+
+        float denom = Cross(d1, d2);
+        if (Mathf.Abs(denom) < 1e-8f)
+            return false; // Parallel or nearly parallel
+
+        var diff = p3 - p1;
+        float t = Cross(diff, d2) / denom;
+        intersection = p1 + d1 * t;
+        return true;
+    }
+
+    /// <summary>
+    /// Ensures that the polygon points are in counter-clockwise order.
+    /// </summary>
+    private static void EnsureCounterClockwise(List<Vector2> poly)
+    {
+        if (poly == null || poly.Count < 3)
+            return;
+
+        if (SignedArea(poly) < 0f)
+            poly.Reverse();
+    }
+
+    private static float SignedArea(List<Vector2> poly)
+    {
+        double area = 0.0;
+        for (int i = 0, j = poly.Count - 1; i < poly.Count; j = i, i++)
+        {
+            var p0 = poly[j];
+            var p1 = poly[i];
+            area += (double)p0.x * p1.y - (double)p1.x * p0.y;
+        }
+        return (float)(area * 0.5);
     }
 }

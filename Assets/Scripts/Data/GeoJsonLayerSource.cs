@@ -1,15 +1,15 @@
 using System.Globalization;
 using Newtonsoft.Json.Linq;
 
-public class GeoJsonLayerSource : LayerSource
+public class GeoJsonMapLayer : MapLayer
 {
     [SerializeField] private GeoJsonDaraManager _dataManager;
 
     public override void Init()
     {
-        if(_init)
+        if (_init)
             return;
-        
+
         if (_dataManager == null)
         {
             Debug.LogError("CadastreLayerBootstrap: dataManager is not assigned, cannot load cached cadastre chunks.");
@@ -30,35 +30,24 @@ public class GeoJsonLayerSource : LayerSource
             Debug.LogWarning("CadastreLayerBootstrap: LoadChunkRange returned no data.");
             return;
         }
-
-        // Собираем единый слой "cadastre" из всех чанков
-        var combinedLayer = new MapLayer(this);
+        
+        base.Init();
 
         foreach (var json in chunks)
-        {
-            if (string.IsNullOrWhiteSpace(json))
-                continue;
+            if (!string.IsNullOrWhiteSpace(json))
+                LoadLayer(json);
 
-            MapLayer chunkLayer = LoadLayer(json);
-
-            if (chunkLayer?.Features != null && chunkLayer.Features.Count > 0)
-                combinedLayer.Features.AddRange(chunkLayer.Features);
-        }
-
-        Debug.Log($"CadastreLayerBootstrap: Rendering cadastre layer with {combinedLayer.Features.Count} features from {chunks.Count} chunks.");
-        MapLayerRenderer.Instance.RenderLayer(combinedLayer);
+        // Debug.Log($"CadastreLayerBootstrap: Rendering cadastre layer with {Features.Count} features from {chunks.Count} chunks.");
         
-        _init =  true;
+        MapLayerRenderer.Instance.RenderLayer(this);
     }
 
-    public MapLayer LoadLayer(string geoJson)
+    public void LoadLayer(string geoJson)
     {
-        var layer = new MapLayer(this);
-
         if (string.IsNullOrWhiteSpace(geoJson))
         {
             Debug.LogWarning("CadastreGeoJsonLayerSource: GeoJSON is null or empty.");
-            return layer;
+            return;
         }
 
         JObject root;
@@ -69,14 +58,14 @@ public class GeoJsonLayerSource : LayerSource
         catch (Exception e)
         {
             Debug.LogError($"CadastreGeoJsonLayerSource: Failed to parse GeoJSON: {e.Message}");
-            return layer;
+            return;
         }
 
         var features = root["features"] as JArray;
         if (features == null)
         {
             Debug.LogWarning("CadastreGeoJsonLayerSource: No 'features' array found in GeoJSON.");
-            return layer;
+            return;
         }
 
         foreach (var featureToken in features)
@@ -100,18 +89,18 @@ public class GeoJsonLayerSource : LayerSource
                 {
                     var feature = CreateFeatureFromPolygon(coordsToken, props);
                     if (feature != null)
-                        layer.Features.Add(feature);
+                        Features.Add(feature);
                     break;
                 }
 
                 case "MultiPolygon":
                 {
                     // Каждое подполигональное кольцо делаем отдельным feature с теми же свойствами
-                    foreach (var poly in (IEnumerable<JToken>) coordsToken)
+                    foreach (var poly in (IEnumerable<JToken>)coordsToken)
                     {
                         var feature = CreateFeatureFromPolygon(poly, props);
                         if (feature != null)
-                            layer.Features.Add(feature);
+                            Features.Add(feature);
                     }
 
                     break;
@@ -121,17 +110,17 @@ public class GeoJsonLayerSource : LayerSource
                 {
                     var feature = CreateFeatureFromLineString(coordsToken, props);
                     if (feature != null)
-                        layer.Features.Add(feature);
+                        Features.Add(feature);
                     break;
                 }
 
                 case "MultiLineString":
                 {
-                    foreach (var line in (IEnumerable<JToken>) coordsToken)
+                    foreach (var line in (IEnumerable<JToken>)coordsToken)
                     {
                         var feature = CreateFeatureFromLineString(line, props);
                         if (feature != null)
-                            layer.Features.Add(feature);
+                            Features.Add(feature);
                     }
 
                     break;
@@ -143,8 +132,7 @@ public class GeoJsonLayerSource : LayerSource
             }
         }
 
-        Debug.Log($"CadastreGeoJsonLayerSource: Loaded cadastre layer with {layer.Features.Count} features.");
-        return layer;
+        Debug.Log($"CadastreGeoJsonLayerSource: Loaded cadastre layer with {Features.Count} features.");
     }
 
     private MapFeature CreateFeatureFromPolygon(JToken coordsToken, JObject props)
@@ -231,7 +219,7 @@ public class GeoJsonLayerSource : LayerSource
         if (!double.TryParse(coordArray[1]?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out double lat))
             return false;
 
-        lonLat = new Vector2((float) lon, (float) lat);
+        lonLat = new Vector2((float)lon, (float)lat);
         return true;
     }
 

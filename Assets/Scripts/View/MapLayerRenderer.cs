@@ -2,9 +2,8 @@ public class MapLayerRenderer : MonoBehaviour
 {
     public static MapLayerRenderer Instance;
 
-    [Header("Material Templates")]
-    public Material lineMaterialTemplate;
-    public Material fillMaterialTemplate; 
+    [Header("Material Templates")] public Material lineMaterialTemplate;
+    public Material fillMaterialTemplate;
 
     [Header("Terrain Projection")] [Tooltip("Layer mask used to raycast against the terrain mesh")] [SerializeField]
     private LayerMask terrainLayerMask = ~0;
@@ -26,58 +25,42 @@ public class MapLayerRenderer : MonoBehaviour
 
     public Area AreaPrefab;
 
-    private readonly Dictionary<string, GameObject> _layerRoots = new();
+    private readonly Dictionary<string, MapLayer> _layers = new();
 
     private void Awake()
     {
         Instance = this;
-        
+
         Physics.queriesHitBackfaces = true;
-        
+
         Application.targetFrameRate = 60;
     }
 
     public void RenderLayer(MapLayer layer)
     {
-        if (layer == null) return;
-        
-        if (_layerRoots.TryGetValue(layer.Id, out var existingRoot))
-        {
-            existingRoot.SetActive(layer.Visible);
+        if (_layers.TryGetValue(layer.Id, out var existingLayer))
             return;
-        }
 
-        var root = new GameObject($"Layer_{layer.Id}");
-        root.transform.SetParent(transform, false);
-        _layerRoots[layer.Id] = root;
-        root.SetActive(layer.Visible);
+        _layers[layer.Id] = layer;
 
         foreach (var feature in layer.Features)
-        {
-            if (feature.Geometry == null) continue;
-
-            switch (feature.Geometry.Type)
-            {
-                case GeometryType.Polygon:
-                    RenderPolygonFeature(layer, feature, root.transform);
-                    break;
-                // при необходимости добавим LineString / Point
-            }
-        }
+            if (feature.Geometry != null)
+                switch (feature.Geometry.Type)
+                {
+                    case GeometryType.Polygon:
+                        RenderPolygonFeature(layer, feature);
+                        break;
+                    // при необходимости добавим LineString / Point
+                }
     }
 
-    public void SetLayerVisible(string id, bool visible)
-    {
-        if (_layerRoots.TryGetValue(id, out var root))
-            root.SetActive(visible);
-    }
-
-    private void RenderPolygonFeature(MapLayer layer, MapFeature feature, Transform parent)
+    private void RenderPolygonFeature(MapLayer layer, MapFeature feature)
     {
         if (feature.Geometry.CoordinatesLonLat.Count == 0 || feature.Geometry.CoordinatesLonLat[0].Count < 2)
             return;
-        
-        var area = Instantiate(AreaPrefab, parent).Setup(layer, feature);
+
+        var area = Instantiate(AreaPrefab, layer.transform).Setup(layer, feature);
+        layer.Areas.Add(area);
     }
 
     public Vector3 SnapToTerrainWorld(Vector3 worldPos)
@@ -96,8 +79,8 @@ public class MapLayerRenderer : MonoBehaviour
         double xMeters = dLon * metersPerDegree;
         double zMeters = dLat * metersPerDegree;
 
-        float x = (float) (xMeters * unityScale);
-        float z = (float) (zMeters * unityScale);
+        float x = (float)(xMeters * unityScale);
+        float z = (float)(zMeters * unityScale);
 
         return new Vector3(x, 0f, z);
     }
@@ -112,12 +95,12 @@ public class MapLayerRenderer : MonoBehaviour
 
         return flatPos;
     }
-    
+
     public Vector2 ToLonLat(Vector3 worldPos)
     {
         double xMeters = worldPos.x / unityScale;
         double zMeters = worldPos.z / unityScale;
-        
+
         double dLon = xMeters / metersPerDegree;
         double dLat = zMeters / metersPerDegree;
 

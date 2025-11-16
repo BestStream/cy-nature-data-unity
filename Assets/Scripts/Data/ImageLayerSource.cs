@@ -1,4 +1,4 @@
-public class ImageLayerSource : LayerSource
+public class ImageMapLayer : MapLayer
 {
     [SerializeField] private MeshRenderer _meshRenderer;
     

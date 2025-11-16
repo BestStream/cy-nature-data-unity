@@ -28,31 +28,71 @@ public class MapFeature
     public Dictionary<string, string> Properties { get; } = new();
 }
 
-public class MapLayer
+public class MapLayer : MonoBehaviour
 {
     public string Id;
     public string DisplayName;
+
     public Color Color;
+
     public float LineWidth;
     public float LineSimplifyTolerance;
+
+    public string IdProperty;
+    public string NameProperty;
+
+    [SerializeField] private float _fillMaterialTransparency = 0.2f;
+
+
+    public List<Area> Areas = new();
+
     public List<MapFeature> Features { get; } = new();
 
-    public bool Visible = true;
+    public bool ForceHighlight;
 
-    public Material LineMaterial, FillMaterial;
+    [NonSerialized] public Material LineMaterial, FillMaterial;
 
-    public MapLayer(LayerSource source)
+    protected bool _init;
+
+    public virtual void Init()
     {
-        Id = source.Id;
-        DisplayName = source.DisplayName;
-        Color = source.Color;
-        LineWidth = source.LineWidth;
-        LineSimplifyTolerance = source.LineSimplifyTolerance;
+        foreach (var area in Areas) // if there are cached areas
+        {
+            var feature = new MapFeature
+            {
+                Id = Id,
+                Name = DisplayName,
+                Geometry = new MapGeometry { Type = GeometryType.Polygon }
+            };
+            Features.Add(feature);
+
+            area.Setup(this, feature);
+        }
 
         LineMaterial = new Material(MapLayerRenderer.Instance.lineMaterialTemplate);
         LineMaterial.SetColor("_BaseColor", Color);
 
         FillMaterial = new Material(MapLayerRenderer.Instance.fillMaterialTemplate);
-        FillMaterial.SetColor("_BaseColor", new Color(Color.r, Color.g, Color.b, 0.2f));
+        FillMaterial.SetColor("_BaseColor", new Color(Color.r, Color.g, Color.b, _fillMaterialTransparency));
+
+        _init = true;
+    }
+
+    public virtual void SetVisible(bool visible)
+    {
+        if (visible)
+            Init();
+
+        gameObject.SetActive(visible);
+    }
+
+    public void SetForceHighlight(bool forceHighlight)
+    {
+        ForceHighlight = forceHighlight;
+
+        foreach (var area in Areas)
+            area.Highlight(ForceHighlight);
+
+        // MapLayerRenderer.Instance.SetLayerVisible(Id, visible);
     }
 }

@@ -299,10 +299,10 @@ public class CameraController : MonoBehaviour
     private  void HoveredAreaShow(Area area)
     {
         _hoveredArea = area;
-        _hoveredArea.MeshVisibility(true);
+        _hoveredArea.Highlight(true);
     }
 
-    private void HoveredAreaHide() => _hoveredArea?.MeshVisibility(false);
+    private void HoveredAreaHide() => _hoveredArea?.Highlight(false);
 
     private void HoveredAreaClear() => _hoveredArea = null;
     
@@ -313,7 +313,7 @@ public class CameraController : MonoBehaviour
         HoveredAreaClear();
         
         _drawArea = area;
-        _drawArea.MeshVisibility(true);
+        _drawArea.Highlight(true);
 
         StartCoroutine(WaitForAreaCompleted());
         IEnumerator WaitForAreaCompleted()

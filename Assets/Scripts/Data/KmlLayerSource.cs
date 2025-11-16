@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Xml;
 
-public class KmlLayerSource : LayerSource
+public class KmlMapLayer : MapLayer
 {
     [SerializeField] private TextAsset _dataSource;
 
@@ -15,16 +15,16 @@ public class KmlLayerSource : LayerSource
             Debug.LogError("Kml is not assigned");
             return;
         }
+        
+        base.Init();
 
-        MapLayerRenderer.Instance.RenderLayer(LoadLayer());
-
-        _init = true;
+        Load();
+        
+        MapLayerRenderer.Instance.RenderLayer(this);
     }
 
-    private MapLayer LoadLayer()
+    private void Load()
     {
-        var layer = new MapLayer(this);
-
         var xml = new XmlDocument();
         try
         {
@@ -33,7 +33,7 @@ public class KmlLayerSource : LayerSource
         catch (Exception e)
         {
             Debug.LogError($"KmlLayerSource: Failed to parse KML for layer '{Id}': {e.Message}");
-            return layer;
+            return;
         }
 
         var ns = new XmlNamespaceManager(xml.NameTable);
@@ -41,17 +41,16 @@ public class KmlLayerSource : LayerSource
 
         var placemarks = xml.SelectNodes("//kml:Placemark", ns);
         if (placemarks == null)
-            return layer;
+            return;
 
         foreach (XmlNode placemark in placemarks)
         {
             var feature = ParsePlacemark(placemark, ns);
             if (feature != null)
-                layer.Features.Add(feature);
+                Features.Add(feature);
         }
 
-        Debug.Log($"KmlLayerSource: Loaded layer '{Id}' ({DisplayName}), features: {layer.Features.Count}");
-        return layer;
+        Debug.Log($"KmlLayerSource: Loaded layer '{Id}' ({DisplayName}), features: {Features.Count}");
     }
 
     private MapFeature ParsePlacemark(XmlNode placemark, XmlNamespaceManager ns)
